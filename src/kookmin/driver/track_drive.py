@@ -59,10 +59,37 @@ def drive(angle, speed):
     motor.publish(motor_msg)
              
 #=============================================
+# 신호등 인식 함수 (초록불만 체크)
+#=============================================
+def detect_green_light(image):
+    h, w, _ = image.shape
+    roi = image[40:120, 180:450]  # ROI는 잘 잡힌 값으로 사용
+
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    cv2.imshow("traffic_light_roi", roi)
+
+    center_pixel = hsv[hsv.shape[0]//2, hsv.shape[1]//2]
+    print("ROI 중앙 HSV:", center_pixel)
+
+    # 예시: 실제 HSV 값에 맞게 조정
+    lower_green = np.array([50, 100, 100])
+    upper_green = np.array([80, 255, 255])
+    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+
+    green_count = cv2.countNonZero(green_mask)
+    print("green:", green_count)
+
+    threshold = 500  # 필요시 조정
+
+    if green_count > threshold:
+        return True
+    else:
+        return False
+
+#=============================================
 # 실질적인 메인 함수 
 #=============================================
 def start():
-
     global motor, image, ranges
     
     print("Start program --------------")
@@ -93,28 +120,33 @@ def start():
     print("======================================")
     print(" S T A R T    D R I V I N G ...")
     print("======================================")
+    
+    started = False  # 출발 여부
 
     #=========================================
     # 메인 루프 
     #=========================================
     while not rospy.is_shutdown():
-
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         cv2.imshow("original", image)
         cv2.imshow("gray", gray)
 
-        if ranges is not None:            
-            angles = np.linspace(0,2*np.pi, len(ranges))+np.pi/2
-            x = ranges * np.cos(angles)
-            y = ranges * np.sin(angles)
+        if not started:
+            # 신호등(초록불) 체크는 처음에만!
+            if detect_green_light(image):
+                print("초록불! 출발합니다.")
+                started = True
+                drive(angle=0.0, speed=30.0)
+            else:
+                print("초록불이 아닙니다. 정지합니다.")
+                drive(angle=0.0, speed=0.0)
+            time.sleep(0.1)
+            cv2.waitKey(1)
+            continue  # 아래 코드 실행하지 않고 루프 반복
 
-            lidar_points.set_data(x, y)
-            fig.canvas.draw_idle()
-            plt.pause(0.01)  
-            
-        drive(angle=0.0, speed=10.0)
+        # started == True 이후에는 신호등 체크 없이 계속 주행
+        drive(angle=0.0, speed=30.0)
         time.sleep(0.1)
-        
         cv2.waitKey(1)
 
 #=============================================
