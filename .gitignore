@@ -4,8 +4,6 @@
 /build
 /devel
 
-/src/
-
 /src/kookmin/D3D12
 /src/kookmin/Drive_Data
 /src/kookmin/MonoBleedingEdge
@@ -14,3 +12,4 @@
 
 **/*.exe
 **/*.dll
+src/CMakeLists.txt
