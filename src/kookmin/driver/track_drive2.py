@@ -20,13 +20,14 @@ image = np.empty(shape=[0])
 ranges = None
 motor = None
 motor_msg = XycarMotor()
-Fix_Speed = 20
+Fix_Speed = 30
 MAX_ANGLE = 50
 
 # Stanley 제어 게인
-K_STANLEY = 2.0
 K_SOFT = 1.0
-K_HEADING = 1.5
+K_STANLEY = 3.0        # 더 강한 CTE 반응
+K_HEADING = 2.5        # 더 큰 방향 보정
+
 
 # 차선 검출 파라미터
 MIN_AREA = 50
@@ -72,6 +73,7 @@ def drive(angle, speed):
 # 차선 검출 함수 (HSV 이미지 입력)
 #=============================================
 def detect_lanes(hsv_image):
+<<<<<<< HEAD
     # 흰색 (Solid Line)
     lower_white = np.array([0, 0, 200])
     upper_white = np.array([180, 30, 255])
@@ -87,6 +89,17 @@ def detect_lanes(hsv_image):
     white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel)
     yellow_mask = cv2.morphologyEx(yellow_mask, cv2.MORPH_CLOSE, kernel)
 
+=======
+    lower_white = np.array([0, 0, 210])
+    upper_white = np.array([180, 25, 255])
+    white_mask = cv2.inRange(hsv_image, lower_white, upper_white)
+    lower_yellow = np.array([20, 100, 100])
+    upper_yellow = np.array([35, 255, 255])
+    yellow_mask = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
+    kernel = np.ones((5, 5), np.uint8)
+    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel)
+    yellow_mask = cv2.morphologyEx(yellow_mask, cv2.MORPH_CLOSE, kernel)
+>>>>>>> feature
     return white_mask, yellow_mask
 
 #=============================================
@@ -222,8 +235,13 @@ def get_lane_info(image):
             return 0.0, 0.0, debug_image
     cte = (lane_center - cx) / (width / 2)
     cte = np.clip(cte, -1.0, 1.0)
+<<<<<<< HEAD
     if abs(heading_error) < 1.0 and abs(cte) > 0.15:
         heading_error = -20.0 if cte < 0 else 20.0
+=======
+    if abs(heading_error) < 1.0 and abs(cte) > 0.2:
+        heading_error = -25.0 if cte < 0 else 25.0
+>>>>>>> feature
     cv2.circle(debug_image, (int(lane_center), height - 50), 5, (0, 255, 0), -1)
     cv2.line(debug_image, (cx, 0), (cx, height), (255, 255, 0), 1)
     cv2.putText(debug_image, f'Lane: {current_lane}', (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
@@ -272,7 +290,12 @@ def start():
                 x = ranges * np.cos(angles)
                 y = ranges * np.sin(angles)
                 lidar_points.set_data(x, y)
+<<<<<<< HEAD
 
+=======
+                fig.canvas.draw_idle()
+                plt.pause(0.01)
+>>>>>>> feature
         except Exception as e:
             rospy.logerr(f"오류 발생: {e}")
             drive(angle=0, speed=Fix_Speed)
