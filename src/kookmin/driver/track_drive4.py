@@ -50,6 +50,9 @@ MIN_AREA    = 50
 # 신호등 검출 상태
 started     = True
 
+#마지막 차선변경 시간
+last_lane_change_time = 0.0
+
 #=============================================
 # PID 컨트롤러 클래스
 #=============================================
@@ -271,11 +274,16 @@ def stanley_control(cte, heading_error, speed):
 # 차선 변경 시작
 #---------------------------------------------
 def start_lane_change():
-    global LANE_CHANGE_MODE, PREV_LANE, target_cte, lane_change_pid
+    global LANE_CHANGE_MODE, PREV_LANE, target_cte, lane_change_pid, last_lane_change_time
+
+    # 쿨다운 체크: 마지막 차선변경 완료 후 3초가 지나야 다시 시작
+    if time.time() - last_lane_change_time < 3.0:
+        return
+    
     if not LANE_CHANGE_MODE:
         LANE_CHANGE_MODE = True
         PREV_LANE = CURRENT_LANE
-        target_cte =  30 if CURRENT_LANE==0 else -30
+        target_cte =  35 if CURRENT_LANE==0 else -35
         lane_change_pid.integral = 0.0
         lane_change_pid.prev_error = 0.0
         rospy.loginfo(f"[LaneChange] start: {PREV_LANE}-> {1-PREV_LANE}")
@@ -284,13 +292,15 @@ def start_lane_change():
 # 차선 변경 제어
 #---------------------------------------------
 def lane_change_control(cte):
-    global LANE_CHANGE_MODE
+    global LANE_CHANGE_MODE, target_cte
+    global last_lane_change_time
     error = target_cte - cte
     ang = lane_change_pid.compute(error)
     angle = np.clip(ang, -MAX_ANGLE, MAX_ANGLE)
     if CURRENT_LANE != PREV_LANE:
         LANE_CHANGE_MODE = False
-        rospy.loginfo(f"[LaneChange] completed: now lane {CURRENT_LANE}")
+        last_lane_change_time = time.time()    # 차선변경 완료 시각 기록
+        rospy.loginfo(f"[LaneChange] completed: now lane {CURRENT_LANE} (cooldown start)")
     return angle
 
 #---------------------------------------------
@@ -342,7 +352,21 @@ def synced_cb(event):
             angle = lane_change_control(cte)
         else:
             angle = stanley_control(cte, heading, Fix_Speed)
-        drive(angle, Fix_Speed)
+        
+        ranges = scan_msg.ranges[0:360]
+        # --- 전방 12시 방향 ±15° (총 30°) 구간에 장애물(콘 포함)이 없으면 차선 모드 전환 ---
+        forward_thresh = 5.0  # m 단위 조정
+        # 인덱스 0이 12시, 배열 길이 360 기준 ±15° → 인덱스 -20~+20
+        # ranges[-15:] + ranges[:16] 로 추출
+        fwd_ranges = list(ranges[-20:]) + list(ranges[:20])
+        has_obstacle = any(0.02 < r < forward_thresh for r in fwd_ranges)
+
+        if has_obstacle:
+            start_lane_change()
+            drive(angle, 60)
+        # --------------------------------------------------------------
+        else:
+            drive(angle, Fix_Speed)
 
     # 화면 표시
     # cv2.imshow('original', img)
