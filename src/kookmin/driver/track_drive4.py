@@ -33,8 +33,8 @@ target_cte = 0.0
 # 주행 파라미터
 Fix_Speed   = 50       # 주행 속도
 MAX_ANGLE   = 100      # 내부 제어 ±100
-K_SOFT      = 0.8
-K_STANLEY   = 80.0
+K_SOFT      = 1.0
+K_STANLEY   = 110.0
 K_HEADING   = 10.0
 
 # Lidar 비주얼 파라미터
@@ -384,7 +384,7 @@ def start():
     rospy.wait_for_message('/usb_cam/image_raw/', Image)
     rospy.wait_for_message('/scan',           LaserScan)
 
-    rospy.loginfo("Ready. Running at 30 Hz")
+    rospy.loginfo("Ready. Running at 10 Hz")
     rospy.spin()
 
 if __name__ == '__main__':
