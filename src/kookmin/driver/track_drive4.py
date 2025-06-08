@@ -283,7 +283,7 @@ def start_lane_change():
     if not LANE_CHANGE_MODE:
         LANE_CHANGE_MODE = True
         PREV_LANE = CURRENT_LANE
-        target_cte =  35 if CURRENT_LANE==0 else -35
+        target_cte =  30 if CURRENT_LANE==0 else -30
         lane_change_pid.integral = 0.0
         lane_change_pid.prev_error = 0.0
         rospy.loginfo(f"[LaneChange] start: {PREV_LANE}-> {1-PREV_LANE}")
@@ -355,7 +355,7 @@ def synced_cb(event):
         
         ranges = scan_msg.ranges[0:360]
         # --- 전방 12시 방향 ±15° (총 30°) 구간에 장애물(콘 포함)이 없으면 차선 모드 전환 ---
-        forward_thresh = 5.0  # m 단위 조정
+        forward_thresh = 8.0  # m 단위 조정
         # 인덱스 0이 12시, 배열 길이 360 기준 ±15° → 인덱스 -20~+20
         # ranges[-15:] + ranges[:16] 로 추출
         fwd_ranges = list(ranges[-20:]) + list(ranges[:20])
